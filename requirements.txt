@@ -1,0 +1,12 @@
+# Meter CLI Dependencies
+# Compatible with Python 3.7+
+
+# Core dependencies (using standard library mostly for cross-platform compatibility)
+# No external dependencies required for basic functionality
+
+# Optional dependencies for enhanced features (uncomment as needed):
+# numpy>=1.19.0          # For advanced mathematical calculations
+# matplotlib>=3.3.0      # For plotting and visualization
+# pandas>=1.1.0          # For data analysis and CSV handling
+# tabulate>=0.8.9        # For better table formatting
+# colorama>=0.4.4        # For cross-platform colored terminal output
