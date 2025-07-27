@@ -200,44 +200,140 @@ def interactive_menu():
                 break
             else:
                 print("\nInvalid choice. Please enter 1, 2, 3, or 4.")
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             print("\n\nExiting Meter CLI. Goodbye!")
             break
         except Exception as e:
             print(f"\nError: {e}")
 
 def interactive_unit_converter(cli):
-    """Interactive unit converter"""
+    """Interactive unit converter with numbered menus"""
     print("\n--- Unit Converter ---")
-    print("Available unit types: flow, pressure, temperature, length")
+    
+    # Unit type selection
+    unit_types = {
+        '1': ('flow', 'Flow Rate'),
+        '2': ('pressure', 'Pressure'),
+        '3': ('temperature', 'Temperature'),
+        '4': ('length', 'Length')
+    }
+    
+    print("\nSelect unit type:")
+    for key, (_, display_name) in unit_types.items():
+        print(f"{key}. {display_name}")
     
     try:
-        unit_type = input("Enter unit type: ").strip().lower()
-        if unit_type not in ['flow', 'pressure', 'temperature', 'length']:
-            print("Invalid unit type. Please use: flow, pressure, temperature, or length")
+        type_choice = input("Enter choice (1-4): ").strip()
+        if type_choice not in unit_types:
+            print("Invalid choice. Please select 1-4.")
             return
         
-        value = float(input("Enter value to convert: "))
-        from_unit = input("From unit: ").strip().lower()
-        to_unit = input("To unit: ").strip().lower()
+        unit_type, type_name = unit_types[type_choice]
         
+        # Available units for each type
+        available_units = {
+            'flow': {
+                '1': ('gpm', 'Gallons per minute (GPM)'),
+                '2': ('lpm', 'Liters per minute (LPM)'),
+                '3': ('m3h', 'Cubic meters per hour (m³/h)'),
+                '4': ('cfs', 'Cubic feet per second (CFS)'),
+                '5': ('lps', 'Liters per second (LPS)')
+            },
+            'pressure': {
+                '1': ('psi', 'Pounds per square inch (PSI)'),
+                '2': ('bar', 'Bar'),
+                '3': ('pa', 'Pascal (Pa)'),
+                '4': ('kpa', 'Kilopascal (kPa)'),
+                '5': ('mpa', 'Megapascal (MPa)'),
+                '6': ('atm', 'Atmosphere (atm)')
+            },
+            'temperature': {
+                '1': ('c', 'Celsius (°C)'),
+                '2': ('f', 'Fahrenheit (°F)'),
+                '3': ('k', 'Kelvin (K)')
+            },
+            'length': {
+                '1': ('m', 'Meters (m)'),
+                '2': ('mm', 'Millimeters (mm)'),
+                '3': ('cm', 'Centimeters (cm)'),
+                '4': ('in', 'Inches (in)'),
+                '5': ('ft', 'Feet (ft)')
+            }
+        }
+        
+        units = available_units[unit_type]
+        
+        # Get value to convert
+        value = float(input(f"\nEnter {type_name.lower()} value to convert: "))
+        
+        # From unit selection
+        print(f"\nSelect FROM unit for {type_name}:")
+        for key, (unit, description) in units.items():
+            print(f"{key}. {description}")
+        
+        from_choice = input("Enter choice: ").strip()
+        if from_choice not in units:
+            print("Invalid choice.")
+            return
+        
+        from_unit = units[from_choice][0]
+        
+        # To unit selection
+        print(f"\nSelect TO unit for {type_name}:")
+        for key, (unit, description) in units.items():
+            print(f"{key}. {description}")
+        
+        to_choice = input("Enter choice: ").strip()
+        if to_choice not in units:
+            print("Invalid choice.")
+            return
+        
+        to_unit = units[to_choice][0]
+        
+        # Perform conversion
         result, error = cli.unit_converter(value, from_unit, to_unit, unit_type)
         if error:
-            print(f"Error: {error}")
+            print(f"\nError: {error}")
         else:
-            print(f"\nResult: {value} {from_unit} = {result:.4f} {to_unit}")
+            from_desc = units[from_choice][1].split('(')[0].strip()
+            to_desc = units[to_choice][1].split('(')[0].strip()
+            print(f"\nConversion Result:")
+            print(f"  {value} {from_unit.upper()} = {result:.4f} {to_unit.upper()}")
+            print(f"  ({from_desc} to {to_desc})")
+            
     except ValueError:
         print("Invalid input. Please enter a valid number.")
     except Exception as e:
         print(f"Error: {e}")
 
 def interactive_flow_calculator(cli):
-    """Interactive flow calculator"""
+    """Interactive flow calculator with numbered menus"""
     print("\n--- Flow Calculator ---")
     
     try:
-        diameter = float(input("Enter pipe diameter (m, in, or mm): "))
+        # Diameter input with unit selection
+        diameter_units = {
+            '1': ('m', 'Meters (m)', 1.0),
+            '2': ('in', 'Inches (in)', 0.0254),
+            '3': ('mm', 'Millimeters (mm)', 0.001),
+            '4': ('cm', 'Centimeters (cm)', 0.01),
+            '5': ('ft', 'Feet (ft)', 0.3048)
+        }
         
+        print("\nSelect diameter unit:")
+        for key, (unit, description, _) in diameter_units.items():
+            print(f"{key}. {description}")
+        
+        diameter_choice = input("Enter choice (1-5): ").strip()
+        if diameter_choice not in diameter_units:
+            print("Invalid choice.")
+            return
+        
+        diameter_value = float(input(f"Enter pipe diameter value: "))
+        diameter_unit, diameter_desc, conversion_factor = diameter_units[diameter_choice]
+        diameter_m = diameter_value * conversion_factor  # Convert to meters
+        
+        # Calculation type selection
         print("\nChoose calculation type:")
         print("1. Calculate flow rate from velocity")
         print("2. Calculate velocity from flow rate")
@@ -246,17 +342,46 @@ def interactive_flow_calculator(cli):
         
         if calc_type == '1':
             velocity = float(input("Enter velocity (m/s): "))
-            result = cli.flow_calculator(diameter, velocity=velocity)
+            result = cli.flow_calculator(diameter_m, velocity=velocity)
         elif calc_type == '2':
-            flow_rate = float(input("Enter flow rate (m³/h or GPM): "))
-            result = cli.flow_calculator(diameter, flow_rate=flow_rate)
+            # Flow rate unit selection
+            flow_units = {
+                '1': ('m3h', 'Cubic meters per hour (m³/h)'),
+                '2': ('gpm', 'Gallons per minute (GPM)'),
+                '3': ('lpm', 'Liters per minute (LPM)'),
+                '4': ('cfs', 'Cubic feet per second (CFS)')
+            }
+            
+            print("\nSelect flow rate unit:")
+            for key, (unit, description) in flow_units.items():
+                print(f"{key}. {description}")
+            
+            flow_choice = input("Enter choice (1-4): ").strip()
+            if flow_choice not in flow_units:
+                print("Invalid choice.")
+                return
+            
+            flow_value = float(input("Enter flow rate value: "))
+            flow_unit, flow_desc = flow_units[flow_choice]
+            
+            # Convert flow rate to m³/h for calculation
+            if flow_unit == 'gpm':
+                flow_m3h = flow_value * 0.227124
+            elif flow_unit == 'lpm':
+                flow_m3h = flow_value * 0.06
+            elif flow_unit == 'cfs':
+                flow_m3h = flow_value * 101.94
+            else:  # m3h
+                flow_m3h = flow_value
+            
+            result = cli.flow_calculator(diameter_m, flow_rate=flow_m3h)
         else:
             print("Invalid choice.")
             return
         
         if result:
             print("\nFlow Calculation Results:")
-            print(f"  Diameter: {result['diameter_m']:.4f} m")
+            print(f"  Input Diameter: {diameter_value} {diameter_unit} ({result['diameter_m']:.4f} m)")
             print(f"  Pipe Area: {result['pipe_area_m2']:.6f} m²")
             print(f"  Flow Rate: {result['flow_rate_m3h']:.2f} m³/h ({result['flow_rate_gpm']:.2f} GPM)")
             print(f"  Velocity: {result['velocity_ms']:.2f} m/s")
@@ -266,24 +391,117 @@ def interactive_flow_calculator(cli):
         print(f"Error: {e}")
 
 def interactive_pressure_calculator(cli):
-    """Interactive pressure drop calculator"""
+    """Interactive pressure drop calculator with numbered menus"""
     print("\n--- Pressure Drop Calculator ---")
     
     try:
-        flow_rate = float(input("Enter flow rate (m³/h or GPM): "))
-        diameter = float(input("Enter pipe diameter (m, in, or mm): "))
-        length = float(input("Enter pipe length (m): "))
+        # Flow rate input with unit selection
+        flow_units = {
+            '1': ('m3h', 'Cubic meters per hour (m³/h)', 1.0),
+            '2': ('gpm', 'Gallons per minute (GPM)', 0.227124),
+            '3': ('lpm', 'Liters per minute (LPM)', 0.06),
+            '4': ('cfs', 'Cubic feet per second (CFS)', 101.94)
+        }
         
-        roughness_input = input("Enter pipe roughness in mm (press Enter for default 0.045): ").strip()
-        roughness = float(roughness_input) if roughness_input else 0.045
+        print("\nSelect flow rate unit:")
+        for key, (unit, description, _) in flow_units.items():
+            print(f"{key}. {description}")
         
-        result = cli.pressure_drop_calculator(flow_rate, diameter, length, roughness)
+        flow_choice = input("Enter choice (1-4): ").strip()
+        if flow_choice not in flow_units:
+            print("Invalid choice.")
+            return
+        
+        flow_value = float(input("Enter flow rate value: "))
+        flow_unit, flow_desc, conversion_factor = flow_units[flow_choice]
+        flow_rate_m3h = flow_value * conversion_factor  # Convert to m³/h
+        
+        # Diameter input with unit selection
+        diameter_units = {
+            '1': ('m', 'Meters (m)', 1.0),
+            '2': ('in', 'Inches (in)', 0.0254),
+            '3': ('mm', 'Millimeters (mm)', 0.001),
+            '4': ('cm', 'Centimeters (cm)', 0.01),
+            '5': ('ft', 'Feet (ft)', 0.3048)
+        }
+        
+        print("\nSelect diameter unit:")
+        for key, (unit, description, _) in diameter_units.items():
+            print(f"{key}. {description}")
+        
+        diameter_choice = input("Enter choice (1-5): ").strip()
+        if diameter_choice not in diameter_units:
+            print("Invalid choice.")
+            return
+        
+        diameter_value = float(input("Enter pipe diameter value: "))
+        diameter_unit, diameter_desc, diameter_conversion = diameter_units[diameter_choice]
+        diameter_m = diameter_value * diameter_conversion  # Convert to meters
+        
+        # Length input with unit selection
+        length_units = {
+            '1': ('m', 'Meters (m)', 1.0),
+            '2': ('ft', 'Feet (ft)', 0.3048),
+            '3': ('km', 'Kilometers (km)', 1000.0),
+            '4': ('mi', 'Miles (mi)', 1609.34)
+        }
+        
+        print("\nSelect length unit:")
+        for key, (unit, description, _) in length_units.items():
+            print(f"{key}. {description}")
+        
+        length_choice = input("Enter choice (1-4): ").strip()
+        if length_choice not in length_units:
+            print("Invalid choice.")
+            return
+        
+        length_value = float(input("Enter pipe length value: "))
+        length_unit, length_desc, length_conversion = length_units[length_choice]
+        length_m = length_value * length_conversion  # Convert to meters
+        
+        # Pipe roughness selection
+        roughness_options = {
+            '1': (0.045, 'Commercial steel (0.045 mm) - Default'),
+            '2': (0.015, 'Drawn tubing (0.015 mm)'),
+            '3': (0.26, 'Galvanized iron (0.26 mm)'),
+            '4': (1.5, 'Cast iron (1.5 mm)'),
+            '5': (0.0015, 'PVC/Plastic (0.0015 mm)'),
+            '6': ('custom', 'Enter custom value')
+        }
+        
+        print("\nSelect pipe roughness:")
+        for key, (value, description) in roughness_options.items():
+            print(f"{key}. {description}")
+        
+        roughness_choice = input("Enter choice (1-6, or press Enter for default): ").strip()
+        
+        if not roughness_choice or roughness_choice == '1':
+            roughness = 0.045
+            roughness_desc = "Commercial steel (0.045 mm)"
+        elif roughness_choice in roughness_options and roughness_choice != '6':
+            roughness = roughness_options[roughness_choice][0]
+            roughness_desc = roughness_options[roughness_choice][1]
+        elif roughness_choice == '6':
+            roughness = float(input("Enter custom roughness value (mm): "))
+            roughness_desc = f"Custom ({roughness} mm)"
+        else:
+            print("Invalid choice, using default.")
+            roughness = 0.045
+            roughness_desc = "Commercial steel (0.045 mm)"
+        
+        result = cli.pressure_drop_calculator(flow_rate_m3h, diameter_m, length_m, roughness)
         
         print("\nPressure Drop Calculation Results:")
-        print(f"  Pressure Drop: {result['pressure_drop_pa']:.0f} Pa ({result['pressure_drop_psi']:.2f} psi, {result['pressure_drop_bar']:.4f} bar)")
-        print(f"  Velocity: {result['velocity_ms']:.2f} m/s")
-        print(f"  Reynolds Number: {result['reynolds_number']:.0f}")
-        print(f"  Friction Factor: {result['friction_factor']:.6f}")
+        print(f"  Input Parameters:")
+        print(f"    Flow Rate: {flow_value} {flow_unit} ({flow_rate_m3h:.2f} m³/h)")
+        print(f"    Diameter: {diameter_value} {diameter_unit} ({diameter_m:.4f} m)")
+        print(f"    Length: {length_value} {length_unit} ({length_m:.2f} m)")
+        print(f"    Roughness: {roughness_desc}")
+        print(f"  Results:")
+        print(f"    Pressure Drop: {result['pressure_drop_pa']:.0f} Pa ({result['pressure_drop_psi']:.2f} psi, {result['pressure_drop_bar']:.4f} bar)")
+        print(f"    Velocity: {result['velocity_ms']:.2f} m/s")
+        print(f"    Reynolds Number: {result['reynolds_number']:.0f}")
+        print(f"    Friction Factor: {result['friction_factor']:.6f}")
     except ValueError:
         print("Invalid input. Please enter valid numbers.")
     except Exception as e:
