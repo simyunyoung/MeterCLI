@@ -507,6 +507,9 @@ class AGA8DetailCalculator:
         z_std = self.calculate_compressibility_factor(1.01325, 288.15, normalized_comp)
         density_std = self.calculate_density(1.01325, 288.15, normalized_comp, z_std)
         
+        # Calculate volume factor at standard conditions
+        volume_factor_std = 1.0 / z_std
+        
         return {
             'input_conditions': {
                 'pressure_barg': pressure_barg,
@@ -521,6 +524,13 @@ class AGA8DetailCalculator:
                 'compressibility_factor': z_factor,
                 'density_kg_m3': density,
                 'density_std_kg_m3': density_std
+            },
+            'standard_conditions': {
+                'temperature_std_c': 15.0,
+                'pressure_std_bara': 1.01325,
+                'compressibility_factor_std': z_std,
+                'density_std_kg_m3': density_std,
+                'volume_factor_std': volume_factor_std
             },
             'heating_values': {
                 'higher_heating_value_mj_m3': hhv,
@@ -579,9 +589,27 @@ def format_gas_report(report: Dict) -> str:
     basic = report['basic_properties']
     output.append(f"Molecular Weight:        {basic['molecular_weight']:.4f} g/mol")
     output.append(f"Specific Gravity:        {basic['specific_gravity']:.6f} (relative to air)")
-    output.append(f"Compressibility Factor:  {basic['compressibility_factor']:.8f}")
+    
+    # Z-Factor section (highlighted)
+    output.append("\nCOMPRESSIBILITY FACTOR (Z):")
+    output.append("-" * 40)
+    output.append(f"Z-Factor (actual):       {basic['compressibility_factor']:.8f}")
+    std_cond = report['standard_conditions']
+    output.append(f"Z-Factor (std 15°C):     {std_cond['compressibility_factor_std']:.8f}")
+    
+    # Density section
+    output.append("\nDENSITY:")
+    output.append("-" * 40)
     output.append(f"Density (actual):        {basic['density_kg_m3']:.4f} kg/m³")
     output.append(f"Density (std 15°C):      {basic['density_std_kg_m3']:.4f} kg/m³")
+    
+    # Standard conditions section
+    output.append("\nSTANDARD CONDITIONS RESULTS:")
+    output.append("-" * 40)
+    output.append(f"Reference Conditions:    {std_cond['temperature_std_c']:.1f}°C, {std_cond['pressure_std_bara']:.5f} bara")
+    output.append(f"Z-Factor (standard):     {std_cond['compressibility_factor_std']:.8f}")
+    output.append(f"Density (standard):      {std_cond['density_std_kg_m3']:.4f} kg/m³")
+    output.append(f"Volume Factor (std):     {std_cond['volume_factor_std']:.8f}")
     
     # Heating values
     output.append("\nHEATING VALUES:")
