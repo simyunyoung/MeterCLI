@@ -172,6 +172,123 @@ class MeterCLI:
             'friction_factor': friction_factor
         }
 
+def interactive_menu():
+    """Interactive menu for user-friendly operation"""
+    cli = MeterCLI()
+    cli.display_banner()
+    
+    while True:
+        print("\n" + "="*60)
+        print("Select a function:")
+        print("1. Unit Converter")
+        print("2. Flow Calculator")
+        print("3. Pressure Drop Calculator")
+        print("4. Exit")
+        print("="*60)
+        
+        try:
+            choice = input("Enter your choice (1-4): ").strip()
+            
+            if choice == '1':
+                interactive_unit_converter(cli)
+            elif choice == '2':
+                interactive_flow_calculator(cli)
+            elif choice == '3':
+                interactive_pressure_calculator(cli)
+            elif choice == '4':
+                print("\nThank you for using Meter CLI!")
+                break
+            else:
+                print("\nInvalid choice. Please enter 1, 2, 3, or 4.")
+        except KeyboardInterrupt:
+            print("\n\nExiting Meter CLI. Goodbye!")
+            break
+        except Exception as e:
+            print(f"\nError: {e}")
+
+def interactive_unit_converter(cli):
+    """Interactive unit converter"""
+    print("\n--- Unit Converter ---")
+    print("Available unit types: flow, pressure, temperature, length")
+    
+    try:
+        unit_type = input("Enter unit type: ").strip().lower()
+        if unit_type not in ['flow', 'pressure', 'temperature', 'length']:
+            print("Invalid unit type. Please use: flow, pressure, temperature, or length")
+            return
+        
+        value = float(input("Enter value to convert: "))
+        from_unit = input("From unit: ").strip().lower()
+        to_unit = input("To unit: ").strip().lower()
+        
+        result, error = cli.unit_converter(value, from_unit, to_unit, unit_type)
+        if error:
+            print(f"Error: {error}")
+        else:
+            print(f"\nResult: {value} {from_unit} = {result:.4f} {to_unit}")
+    except ValueError:
+        print("Invalid input. Please enter a valid number.")
+    except Exception as e:
+        print(f"Error: {e}")
+
+def interactive_flow_calculator(cli):
+    """Interactive flow calculator"""
+    print("\n--- Flow Calculator ---")
+    
+    try:
+        diameter = float(input("Enter pipe diameter (m, in, or mm): "))
+        
+        print("\nChoose calculation type:")
+        print("1. Calculate flow rate from velocity")
+        print("2. Calculate velocity from flow rate")
+        
+        calc_type = input("Enter choice (1 or 2): ").strip()
+        
+        if calc_type == '1':
+            velocity = float(input("Enter velocity (m/s): "))
+            result = cli.flow_calculator(diameter, velocity=velocity)
+        elif calc_type == '2':
+            flow_rate = float(input("Enter flow rate (m³/h or GPM): "))
+            result = cli.flow_calculator(diameter, flow_rate=flow_rate)
+        else:
+            print("Invalid choice.")
+            return
+        
+        if result:
+            print("\nFlow Calculation Results:")
+            print(f"  Diameter: {result['diameter_m']:.4f} m")
+            print(f"  Pipe Area: {result['pipe_area_m2']:.6f} m²")
+            print(f"  Flow Rate: {result['flow_rate_m3h']:.2f} m³/h ({result['flow_rate_gpm']:.2f} GPM)")
+            print(f"  Velocity: {result['velocity_ms']:.2f} m/s")
+    except ValueError:
+        print("Invalid input. Please enter valid numbers.")
+    except Exception as e:
+        print(f"Error: {e}")
+
+def interactive_pressure_calculator(cli):
+    """Interactive pressure drop calculator"""
+    print("\n--- Pressure Drop Calculator ---")
+    
+    try:
+        flow_rate = float(input("Enter flow rate (m³/h or GPM): "))
+        diameter = float(input("Enter pipe diameter (m, in, or mm): "))
+        length = float(input("Enter pipe length (m): "))
+        
+        roughness_input = input("Enter pipe roughness in mm (press Enter for default 0.045): ").strip()
+        roughness = float(roughness_input) if roughness_input else 0.045
+        
+        result = cli.pressure_drop_calculator(flow_rate, diameter, length, roughness)
+        
+        print("\nPressure Drop Calculation Results:")
+        print(f"  Pressure Drop: {result['pressure_drop_pa']:.0f} Pa ({result['pressure_drop_psi']:.2f} psi, {result['pressure_drop_bar']:.4f} bar)")
+        print(f"  Velocity: {result['velocity_ms']:.2f} m/s")
+        print(f"  Reynolds Number: {result['reynolds_number']:.0f}")
+        print(f"  Friction Factor: {result['friction_factor']:.6f}")
+    except ValueError:
+        print("Invalid input. Please enter valid numbers.")
+    except Exception as e:
+        print(f"Error: {e}")
+
 def main():
     parser = argparse.ArgumentParser(description='Meter CLI - Metering Engineer Tool Suite')
     parser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
@@ -198,8 +315,13 @@ def main():
     pressure_parser.add_argument('length', type=float, help='Pipe length (m)')
     pressure_parser.add_argument('--roughness', type=float, default=0.045, help='Pipe roughness (mm)')
     
-    args = parser.parse_args()
+    # Check if any arguments were provided
+    if len(sys.argv) == 1:
+        # No arguments provided, start interactive mode
+        interactive_menu()
+        return
     
+    args = parser.parse_args()
     cli = MeterCLI()
     
     if not args.command:
