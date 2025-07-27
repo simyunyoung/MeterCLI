@@ -8,7 +8,7 @@ import argparse
 import sys
 import os
 from pathlib import Path
-from aga8_calculator import AGA8Calculator, format_gas_report
+from aga8_calculator import AGA8DetailCalculator, format_gas_report
 
 # Ensure cross-platform compatibility
 if sys.platform.startswith('win'):
@@ -517,7 +517,7 @@ def interactive_aga8_calculator():
     print("Enter gas composition in mol%, pressure in barg, and temperature in °C")
     
     try:
-        calculator = AGA8Calculator()
+        calculator = AGA8DetailCalculator()
         composition = {}
         
         # Common gas components with user-friendly names
