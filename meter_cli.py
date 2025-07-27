@@ -8,6 +8,7 @@ import argparse
 import sys
 import os
 from pathlib import Path
+from aga8_calculator import AGA8Calculator, format_gas_report
 
 # Ensure cross-platform compatibility
 if sys.platform.startswith('win'):
@@ -183,11 +184,12 @@ def interactive_menu():
         print("1. Unit Converter")
         print("2. Flow Calculator")
         print("3. Pressure Drop Calculator")
-        print("4. Exit")
+        print("4. AGA8 Gas Report Calculator")
+        print("5. Exit")
         print("="*60)
         
         try:
-            choice = input("Enter your choice (1-4): ").strip()
+            choice = input("Enter your choice (1-5): ").strip()
             
             if choice == '1':
                 interactive_unit_converter(cli)
@@ -196,10 +198,12 @@ def interactive_menu():
             elif choice == '3':
                 interactive_pressure_calculator(cli)
             elif choice == '4':
+                interactive_aga8_calculator()
+            elif choice == '5':
                 print("\nThank you for using Meter CLI!")
                 break
             else:
-                print("\nInvalid choice. Please enter 1, 2, 3, or 4.")
+                print("\nInvalid choice. Please enter 1, 2, 3, 4, or 5.")
         except (KeyboardInterrupt, EOFError):
             print("\n\nExiting Meter CLI. Goodbye!")
             break
@@ -506,6 +510,136 @@ def interactive_pressure_calculator(cli):
         print("Invalid input. Please enter valid numbers.")
     except Exception as e:
         print(f"Error: {e}")
+
+def interactive_aga8_calculator():
+    """Interactive AGA8 gas report calculator"""
+    print("\n--- AGA8 Gas Report Calculator ---")
+    print("Enter gas composition in mol%, pressure in barg, and temperature in °C")
+    
+    try:
+        calculator = AGA8Calculator()
+        composition = {}
+        
+        # Common gas components with user-friendly names
+        component_options = {
+            '1': ('methane', 'Methane (CH₄)'),
+            '2': ('ethane', 'Ethane (C₂H₆)'),
+            '3': ('propane', 'Propane (C₃H₈)'),
+            '4': ('n-butane', 'n-Butane (C₄H₁₀)'),
+            '5': ('i-butane', 'i-Butane (C₄H₁₀)'),
+            '6': ('n-pentane', 'n-Pentane (C₅H₁₂)'),
+            '7': ('i-pentane', 'i-Pentane (C₅H₁₂)'),
+            '8': ('hexane', 'Hexane (C₆H₁₄)'),
+            '9': ('nitrogen', 'Nitrogen (N₂)'),
+            '10': ('carbon_dioxide', 'Carbon Dioxide (CO₂)'),
+            '11': ('hydrogen_sulfide', 'Hydrogen Sulfide (H₂S)'),
+            '12': ('water', 'Water (H₂O)'),
+            '13': ('helium', 'Helium (He)'),
+            '14': ('hydrogen', 'Hydrogen (H₂)'),
+            '15': ('carbon_monoxide', 'Carbon Monoxide (CO)'),
+            '16': ('oxygen', 'Oxygen (O₂)')
+        }
+        
+        print("\nGas Composition Input:")
+        print("Available components:")
+        for key, (comp, display) in component_options.items():
+            print(f"{key:>2}. {display}")
+        
+        print("\nEnter composition for each component (mol%). Press Enter to skip a component.")
+        print("Enter 0 or leave blank for components not present in your gas.")
+        
+        total_entered = 0.0
+        
+        # Get composition for each component
+        for key, (component, display_name) in component_options.items():
+            while True:
+                try:
+                    user_input = input(f"{display_name}: ").strip()
+                    if not user_input:
+                        break  # Skip this component
+                    
+                    value = float(user_input)
+                    if value < 0:
+                        print("  Error: Composition cannot be negative. Please enter a positive value or 0.")
+                        continue
+                    elif value > 100:
+                        print("  Error: Composition cannot exceed 100%. Please enter a valid percentage.")
+                        continue
+                    
+                    if value > 0:
+                        composition[component] = value
+                        total_entered += value
+                        
+                        if total_entered > 100:
+                            print(f"  Warning: Total composition ({total_entered:.2f}%) exceeds 100%.")
+                            print("  The composition will be normalized automatically.")
+                    break
+                except ValueError:
+                    print("  Error: Please enter a valid number.")
+        
+        if not composition:
+            print("\nError: No gas composition entered. Please enter at least one component.")
+            return
+        
+        print(f"\nTotal composition entered: {total_entered:.2f}%")
+        if abs(total_entered - 100.0) > 0.01:
+            print("Note: Composition will be normalized to 100%.")
+        
+        # Get pressure
+        while True:
+            try:
+                pressure_input = input("\nEnter pressure (barg): ").strip()
+                pressure_barg = float(pressure_input)
+                if pressure_barg < 0:
+                    print("Error: Pressure cannot be negative.")
+                    continue
+                break
+            except ValueError:
+                print("Error: Please enter a valid pressure value.")
+        
+        # Get temperature
+        while True:
+            try:
+                temp_input = input("Enter temperature (°C): ").strip()
+                temperature_degc = float(temp_input)
+                if temperature_degc < -273.15:
+                    print("Error: Temperature cannot be below absolute zero (-273.15°C).")
+                    continue
+                break
+            except ValueError:
+                print("Error: Please enter a valid temperature value.")
+        
+        # Generate and display report
+        print("\nGenerating AGA8 Gas Report...")
+        
+        try:
+            report = calculator.generate_detailed_report(composition, pressure_barg, temperature_degc)
+            formatted_report = format_gas_report(report)
+            print(formatted_report)
+            
+            # Ask if user wants to save the report
+            save_choice = input("\nWould you like to save this report to a file? (y/n): ").strip().lower()
+            if save_choice in ['y', 'yes']:
+                filename = input("Enter filename (without extension): ").strip()
+                if not filename:
+                    filename = f"aga8_report_{pressure_barg}barg_{temperature_degc}C"
+                
+                filename = f"{filename}.txt"
+                try:
+                    with open(filename, 'w') as f:
+                        f.write(formatted_report)
+                    print(f"Report saved to: {filename}")
+                except Exception as e:
+                    print(f"Error saving file: {e}")
+                    
+        except Exception as e:
+            print(f"\nError generating AGA8 report: {e}")
+            print("Please check your input values and try again.")
+            
+    except KeyboardInterrupt:
+        print("\n\nAGA8 calculation cancelled.")
+    except Exception as e:
+        print(f"\nUnexpected error: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description='Meter CLI - Metering Engineer Tool Suite')
